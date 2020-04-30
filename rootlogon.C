@@ -7,6 +7,7 @@
 
 #include "TROOT.h"
 #include "TSystem.h"
+#include "TInterpreter.h"
 #include "TSystemDirectory.h"
 #include "TObject.h"
 #include "TObjArray.h"
@@ -81,9 +82,11 @@ void rootlogon() {
     TString PYTHIA8DATA = gSystem->Getenv("PYTHIA8DATA");
 
     if(!pythia_setup){
-        TString pythia_substring = "pythia8"; // substring we will search for in LD_LIBRARY_PATH
+        TString pythia_substring = "pythia8"; // substring we will search for in LD_LIBRARY_PATH & DYLD_LIBRARY_PATH (dyld for macOS)
         TString LD_LIBRARY_PATH = TString(gSystem->Getenv("LD_LIBRARY_PATH"));
-        TObjArray* path_arr = LD_LIBRARY_PATH.Tokenize(":");
+        TString DYLD_LIBRARY_PATH = TString(gSystem->Getenv("DYLD_LIBRARY_PATH"));
+        TString LIBRARY_PATH = LD_LIBRARY_PATH + ":" + DYLD_LIBRARY_PATH;
+        TObjArray* path_arr = LIBRARY_PATH.Tokenize(":");
         
         for (UInt_t i = 0; i < path_arr->GetEntries(); i++) {
             TString entry = ((TObjString*)path_arr->At(i))->String();
@@ -141,6 +144,15 @@ void rootlogon() {
             Error("rootlogon.C", "Did not find the Pythia8 shared library. Aborting.");
             return;
         }
+        
+        /* TODO: If PYTHIA8_LIB_DIR is omitted below, this seems to work in the ROOT prompt
+         * but not in PyROOT. There might be some sort of difference with include paths,
+         * calling "ROOT.gROOT.Macro("rootlogon.C")" will raise an error in
+         * TMacOSXSystem::FindDynamicLibrary(), the error message displays some set of
+         * paths that don't match $LD_LIBRARY_PATH or $DYLD_LIBRARY_PATH. Maybe this
+         * is something Python/PyROOT-specific?
+         */
+        PYTHIA8_LIB = PYTHIA8_LIB_DIR + "/" + PYTHIA8_LIB;
         std::cout << "\nFound Pythia8 shared library:\t" << PYTHIA8_LIB << std::endl;
         gSystem->Load(PYTHIA8_LIB);
         
