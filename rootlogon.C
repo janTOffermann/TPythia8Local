@@ -50,22 +50,22 @@ Bool_t TPythiaCheck(){
 
 void rootlogon() {
     
-    std::cout << "(Running local rootlogon.C)" << std::endl;
+    std::cout << "Running local rootlogon.C." << std::endl;
     std::cout << "Checking if TPythia8 is configured with your ROOT build." << std::endl;
     Bool_t pythia_setup = PythiaCheck();
     Bool_t tpythia_setup = TPythiaCheck();
     
     // Print statements for Pythia env variables check
-    if(pythia_setup == kFALSE) std::cout << "\n\tEnvironment variables $PYTHIA8 and/or $PYTHIA8DATA are not set up." << std::endl;
+    if(pythia_setup == kFALSE) std::cout << "\nEnvironment variables $PYTHIA8 and/or $PYTHIA8DATA are not set up." << std::endl;
     else{
-        std::cout << "\n\tFound $PYTHIA8 and $PYTHIA8DATA." << std::endl;
+        std::cout << "\nFound $PYTHIA8 and $PYTHIA8DATA." << std::endl;
         std::cout << "\t$PYTHIA8 \t= " << gSystem->Getenv("PYTHIA8") << std::endl;
         std::cout << "\t$PYTHIA8DATA \t= " << gSystem->Getenv("PYTHIA8DATA") << std::endl;
     }
 
     // Print statements for TPythia8 library check
-    if(tpythia_setup == kFALSE) std::cout << "\n\tDid not find libEGPythia8, TPythia8 is not set up -> Will use local TPythia8." << std::endl;
-    else std::cout << "\n\tFound libEGPythia8, TPythia8 is set up." << std::endl;
+    if(tpythia_setup == kFALSE) std::cout << "\nDid not find libEGPythia8, TPythia8 is not set up -> Will use local TPythia8." << std::endl;
+    else std::cout << "\nFound libEGPythia8, TPythia8 is set up." << std::endl;
     
     // If everything is set up, we can finish here.
     if(pythia_setup && tpythia_setup) return;
@@ -145,15 +145,17 @@ void rootlogon() {
             return;
         }
         
-        /* TODO: If PYTHIA8_LIB_DIR is omitted below, this seems to work in the ROOT prompt
-         * but not in PyROOT. There might be some sort of difference with include paths,
-         * calling "ROOT.gROOT.Macro("rootlogon.C")" will raise an error in
-         * TMacOSXSystem::FindDynamicLibrary(), the error message displays some set of
-         * paths that don't match $LD_LIBRARY_PATH or $DYLD_LIBRARY_PATH. Maybe this
-         * is something Python/PyROOT-specific?
-         */
-        PYTHIA8_LIB = PYTHIA8_LIB_DIR + "/" + PYTHIA8_LIB;
-        std::cout << "\nFound Pythia8 shared library:\t" << PYTHIA8_LIB << std::endl;
+        // Now we will add PYTHIA8_LIB_DIR to the dynamic path. Alternatively one can
+        // just use the full path, /path/to/lib/library.[so|lib|dylib|a],
+        // in TSystem::Load(). (The full path is not needed if you already have
+        // the Pythia8 library in $(DY)LD_LIBRARY_PATH, but this might still cause
+        // issues when using PyROOT.)
+        
+        TString dynamic_path = gSystem->GetDynamicPath();
+        dynamic_path = PYTHIA8_LIB_DIR + ":" + dynamic_path;
+        gSystem->SetDynamicPath(dynamic_path);
+        std::cout << "\nAdded to dynamic path via gSystem:\t" << PYTHIA8_LIB_DIR << std::endl;
+        std::cout << "\nFound Pythia8 shared library:\t" << PYTHIA8_LIB_DIR << "/" << PYTHIA8_LIB << std::endl;
         gSystem->Load(PYTHIA8_LIB);
         
         // Finally, we are ready to load our local TPythia8.
